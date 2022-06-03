@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
@@ -23,27 +22,38 @@ import javax.swing.JPanel;
 
 public class TicTacToe implements Runnable {
 
+	// conection type
 	private String ip = "localhost";
+	// aplication port
 	private int port = 22222;
-	private Scanner scanner = new Scanner(System.in);
+	// Jframe instance
 	private JFrame frame;
+	// window size
 	private final int WIDTH = 506;
 	private final int HEIGHT = 527;
+	// execution thread
 	private Thread thread;
 
+	// painter instance
 	private Painter painter;
+	// socket instance
 	private Socket socket;
+	// output data instance
 	private DataOutputStream dos;
+	// input data instance
 	private DataInputStream dis;
 
+	// server socket instance
 	private ServerSocket serverSocket;
 
+	// app images
 	private BufferedImage board;
 	private BufferedImage redX;
 	private BufferedImage blueX;
 	private BufferedImage redCircle;
 	private BufferedImage blueCircle;
 
+	// spaces on screen
 	private String[] spaces = new String[9];
 
 	private boolean yourTurn = false;
@@ -59,27 +69,35 @@ public class TicTacToe implements Runnable {
 	private int firstSpot = -1;
 	private int secondSpot = -1;
 
+	// declaração de fontes
 	private Font font = new Font("Consolas", Font.BOLD, 32);
 	private Font smallerFont = new Font("Consolas", Font.BOLD, 20);
 	private Font largerFont = new Font("Consolas", Font.BOLD, 50);
 
+	// mensagens na tela
 	private String waitingString = "Esperando outro Jogador";
 	private String unableToCommunicateWithOpponentString = "Impossível conectar com o Oponente.";
 	private String wonString = "VITÓRIA!";
 	private String enemyWonString = "DERROTA!";
 	private String tieString = "EMPATE!";
 
+	// casos de vitória
 	private int[][] wins = new int[][] { { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 }, { 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 }, { 0, 4, 8 }, { 2, 4, 6 } };
 
+	/**
+	 * Main method
+	 */
 	public TicTacToe() {
-
+	
 		loadImages();
 
 		painter = new Painter();
 		painter.setPreferredSize(new Dimension(WIDTH, HEIGHT));
 
+		// if there is no connection, initialize server
 		if (!connect()) initializeServer();
 
+		// open app screen
 		frame = new JFrame();
 		frame.setTitle("JOGO DA VELHA");
 		frame.setContentPane(painter);
@@ -89,15 +107,20 @@ public class TicTacToe implements Runnable {
 		frame.setResizable(false);
 		frame.setVisible(true);
 
+		// open execution thread
 		thread = new Thread(this, "TicTacToe");
 		thread.start();
 	}
 
+	/**
+	 * Main execution 
+	 */
 	public void run() {
 		while (true) {
 			tick();
 			painter.repaint();
 
+			// wait for the server request if the game is not started 
 			if (!circle && !accepted) {
 				listenForServerRequest();
 			}
@@ -224,6 +247,9 @@ public class TicTacToe implements Runnable {
 		}
 	}
 
+	/**
+	 * Check if the game is a draw
+	 */
 	private void checkForTie() {
 		for (int i = 0; i < spaces.length; i++) {
 			if (spaces[i] == null) {
@@ -233,11 +259,17 @@ public class TicTacToe implements Runnable {
 		tie = true;
 	}
 
+	/**
+	 * Lister for server request
+	 */
 	private void listenForServerRequest() {
 		Socket socket = null;
 		try {
+			// accept server socket request
 			socket = serverSocket.accept();
+			// start a output stream method for the game comunication 
 			dos = new DataOutputStream(socket.getOutputStream());
+			// start a input stream method for the game comunication 
 			dis = new DataInputStream(socket.getInputStream());
 			accepted = true;
 			System.out.println("CLIENT HAS REQUESTED TO JOIN, AND WE HAVE ACCEPTED");
@@ -246,10 +278,14 @@ public class TicTacToe implements Runnable {
 		}
 	}
 
+	// connect to the other client
 	private boolean connect() {
 		try {
+			// define ip and port for conection
 			socket = new Socket(ip, port);
+			// start a output stream method for the game comunication
 			dos = new DataOutputStream(socket.getOutputStream());
+			// start a input stream method for the game comunication
 			dis = new DataInputStream(socket.getInputStream());
 			accepted = true;
 		} catch (IOException e) {
@@ -260,8 +296,12 @@ public class TicTacToe implements Runnable {
 		return true;
 	}
 
+	/**
+	 * Initialize socket server
+	 */
 	private void initializeServer() {
 		try {
+			// start a server socket
 			serverSocket = new ServerSocket(port, 8, InetAddress.getByName(ip));
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -270,6 +310,9 @@ public class TicTacToe implements Runnable {
 		circle = false;
 	}
 
+	/**
+	 * Load app images to show on screen
+	 */
 	private void loadImages() {
 		try {
 			board = ImageIO.read(getClass().getResourceAsStream("/board.png"));
@@ -320,6 +363,7 @@ public class TicTacToe implements Runnable {
 						Toolkit.getDefaultToolkit().sync();
 
 						try {
+							// pass the clicked position to server
 							dos.writeInt(position);
 							dos.flush();
 						} catch (IOException e1) {
